@@ -22,8 +22,9 @@ export function usePlugin({
             window.electron.ipcRenderer.send('stop-plugin', {
                 pluginName
             })
+            console.log(`Plugin ${pluginName} stopped on unmount`)
         }
-    }, [])
+    }, [pluginName])
 
     useEffect(() => {
         const handler = (_event, _payload: PluginStartResult): void => {

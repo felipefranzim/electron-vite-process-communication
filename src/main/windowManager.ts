@@ -1,9 +1,11 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
+import { Command } from '../shared/commandSchema'
 
 interface WindowProps {
     title: string
     route: string
+    command?: Command
 }
 
 export class WindowManager {
@@ -40,7 +42,7 @@ export class WindowManager {
         return mainWindow
     }
 
-    async createSecondaryWindow({ title, route }: WindowProps): Promise<BrowserWindow> {
+    async createSecondaryWindow({ title, route, command }: WindowProps): Promise<BrowserWindow> {
         const display = screen.getPrimaryDisplay()
         const { width, height } = display.workAreaSize
 
@@ -71,6 +73,11 @@ export class WindowManager {
         // Mostra a janela quando estiver pronta
         secondaryWindow.once('ready-to-show', () => {
             secondaryWindow.show()
+
+            // Envia o comando para a janela quando ela estiver pronta
+            if (command) {
+                secondaryWindow.webContents.send('command-received', command)
+            }
         })
 
         if (this.isDev && process.env['ELECTRON_RENDERER_URL']) {
