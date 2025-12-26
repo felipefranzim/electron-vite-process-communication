@@ -64,7 +64,7 @@ async function createApplication(): Promise<void> {
         })
 
     // Inicia a janela principal do Hub
-    windowManager = new WindowManager()
+    windowManager = new WindowManager(pluginManager)
     mainWindow = await windowManager.createMainWindow()
 
     mainWindow.on('close', (event) => {
@@ -124,6 +124,18 @@ app.whenReady().then(() => {
                 success: false,
                 error: String(error)
             } as PluginStartResult)
+        }
+    })
+
+    // Handler para buscar os plugins carregados
+    ipcMain.handle('get-plugins', async () => {
+        try {
+            const plugins = pluginManager.getPlugins()
+            console.log('📦 Plugins requested via IPC handle:', plugins.length, 'plugins')
+            return plugins
+        } catch (error) {
+            console.error('❌ Error getting plugins:', error)
+            return []
         }
     })
 

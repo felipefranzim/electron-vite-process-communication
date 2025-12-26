@@ -1,6 +1,7 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { Command } from '../shared/commandSchema'
+import { PluginManager } from './pluginManager'
 
 interface WindowProps {
     title: string
@@ -10,6 +11,11 @@ interface WindowProps {
 
 export class WindowManager {
     private isDev = process.env.NODE_ENV === 'development'
+    private pluginManager: PluginManager
+
+    constructor(pluginManager: PluginManager) {
+        this.pluginManager = pluginManager
+    }
 
     async createMainWindow(): Promise<BrowserWindow> {
         const mainWindow = new BrowserWindow({
@@ -30,6 +36,13 @@ export class WindowManager {
         // Mostra a janela quando estiver pronta
         mainWindow.once('ready-to-show', () => {
             mainWindow.show()
+        })
+
+        // Envia os plugins quando o conteúdo web estiver completamente carregado
+        mainWindow.webContents.once('did-finish-load', () => {
+            const plugins = this.pluginManager.getPlugins()
+            console.log('Sending plugins to renderer:', plugins)
+            mainWindow.webContents.send('plugins-loaded', plugins)
         })
 
         if (this.isDev && process.env['ELECTRON_RENDERER_URL']) {

@@ -1,24 +1,11 @@
-import { usePlugin } from '@renderer/hooks/usePlugin'
 import { useCommand } from '@renderer/hooks/useCommand'
 import { useEffect } from 'react'
 import { CapturaFotoCommand } from '../../../shared/commands/capturaFotoCommand'
+import { useBackgroundRemoval } from '@renderer/hooks/useBackgroundRemoval'
 
 export function CapturaFoto(): React.JSX.Element {
     const { command } = useCommand<CapturaFotoCommand>()
-
-    const { startPlugin: startCameraPlugin } = usePlugin({
-        pluginName: 'BackgroundRemoval1',
-        onPluginStarted: (payload) => {
-            console.log('BackgroundRemoval1 started with payload:', payload)
-        }
-    })
-
-    const { startPlugin: startIcaoPlugin } = usePlugin({
-        pluginName: 'BackgroundRemoval2',
-        onPluginStarted: (payload) => {
-            console.log('BackgroundRemoval2 started with payload:', payload)
-        }
-    })
+    const { removeBackground, imagemComFundoRemovido } = useBackgroundRemoval()
 
     useEffect(() => {
         if (command) {
@@ -28,12 +15,8 @@ export function CapturaFoto(): React.JSX.Element {
             console.log('Dimensões:', command.larguraFoto, 'x', command.alturaFoto)
             console.log('DPI:', command.dpi)
             console.log('Configurações ICAO:', command.configuracoesIcao)
-
-            // Iniciar os plugins com base no comando recebido
-            startCameraPlugin()
-            startIcaoPlugin()
         }
-    }, [command, startCameraPlugin, startIcaoPlugin])
+    }, [command])
 
     return (
         <div>
@@ -48,8 +31,51 @@ export function CapturaFoto(): React.JSX.Element {
                     <p>Upload habilitado: {command.uploadFotoHabilitado ? 'Sim' : 'Não'}</p>
                 </div>
             )}
-            <button onClick={startCameraPlugin}>Iniciar câmera</button>
-            <button onClick={startIcaoPlugin}>Iniciar ICAO</button>
+            <div>
+                <input
+                    id="image-upload"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const reader = new FileReader()
+                        reader.onload = () => {
+                            const result = reader.result
+                            if (typeof result === 'string') {
+                                // result é algo como "data:image/png;base64,AAAA..."
+                                const base64 = result.split(',')[1] ?? result
+                                removeBackground(base64)
+                            }
+                        }
+                        reader.readAsDataURL(file)
+                        // permitir reenviar o mesmo arquivo depois
+                        e.currentTarget.value = ''
+                    }}
+                />
+                <button
+                    onClick={() => {
+                        const input = document.getElementById(
+                            'image-upload'
+                        ) as HTMLInputElement | null
+                        input?.click()
+                    }}
+                >
+                    Upload imagem
+                </button>
+
+                {imagemComFundoRemovido && (
+                    <div>
+                        <h3>Imagem com fundo removido</h3>
+                        <img
+                            src={`data:image/png;base64,${imagemComFundoRemovido}`}
+                            alt="Removida"
+                            style={{ maxWidth: '100%' }}
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

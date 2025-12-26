@@ -1,41 +1,89 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useEffect } from 'react'
 import Versions from './components/Versions'
 import electronLogo from './assets/electron.svg'
+import { usePluginStore } from './stores/usePluginStore'
 
 function App(): React.JSX.Element {
-  const ipcHandle = (): void =>
-    window.electron.ipcRenderer.send('open-secondary-window', {
-      title: 'Secondary Window',
-      route: '/secondary'
-    })
+    const setPlugins = usePluginStore((state: any) => state.setPlugins)
+    const plugins = usePluginStore((state) => state.plugins)
+    useEffect(() => {
+        // Estratégia 1: Escutar o evento 'plugins-loaded'
+        const removeListener = window.electron.ipcRenderer.on(
+            'plugins-loaded',
+            (_event, plugins) => {
+                console.log('Plugins loaded via event:', plugins)
+                setPlugins(plugins)
+            }
+        )
 
-  const startPlugin = (): void =>
-    window.electron.ipcRenderer.send('start-plugin', { pluginName: 'BackgroundRemoval' })
-  return (
-    <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={startPlugin}>
-            Start Plugin
-          </a>
-        </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
-          </a>
-        </div>
-      </div>
-      <Versions></Versions>
-    </>
-  )
+        // Estratégia 2: Solicitar os plugins manualmente (fallback)
+        const loadPlugins = async (): Promise<void> => {
+            try {
+                const plugins = await window.electron.ipcRenderer.invoke('get-plugins')
+                console.log('Plugins loaded via invoke:', plugins)
+                if (plugins && plugins.length > 0) {
+                    setPlugins(plugins)
+                }
+            } catch (error) {
+                console.error('Error loading plugins:', error)
+            }
+        }
+
+        // Aguarda um pouco e então solicita os plugins (caso o evento não tenha chegado)
+        const timeoutId = setTimeout(() => {
+            loadPlugins()
+        }, 500)
+
+        // Cleanup
+        return () => {
+            if (removeListener) {
+                removeListener()
+            }
+            clearTimeout(timeoutId)
+        }
+    }, [setPlugins])
+
+    return (
+        <>
+            <img alt="logo" className="logo" src={electronLogo} />
+            <div className="creator">Powered by electron-vite</div>
+            <div className="text">
+                Build an Electron app with <span className="react">React</span>
+                &nbsp;and <span className="ts">TypeScript</span>
+            </div>
+            <p className="tip">
+                Please try pressing <code>F12</code> to open the devTool
+            </p>
+            <div className="actions">
+                <div className="action">
+                    <a target="_blank" rel="noreferrer">
+                        Start Plugin
+                    </a>
+                </div>
+                <div className="action">
+                    <a target="_blank" rel="noreferrer">
+                        Send IPC
+                    </a>
+                </div>
+            </div>
+            <Versions></Versions>
+            {plugins && plugins.length > 0 ? (
+                <div className="plugin-list">
+                    <h2>Loaded Plugins:</h2>
+                    <ul>
+                        {plugins.map((plugin: any) => (
+                            <li key={plugin.Name}>
+                                {plugin.Name} - {plugin.Version}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            ) : (
+                <div>No plugins loaded.</div>
+            )}
+        </>
+    )
 }
 
 export default App
