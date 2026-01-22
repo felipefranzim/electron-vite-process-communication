@@ -8,12 +8,13 @@ function App(): React.JSX.Element {
     const setPlugins = usePluginStore((state: any) => state.setPlugins)
     const plugins = usePluginStore((state) => state.plugins)
 
-    window.electron.ipcRenderer.on('plugins-loaded', (_event, plugins) => {
-        console.log('Plugins loaded via event:', plugins)
-        setPlugins(plugins)
-    })
-
     useEffect(() => {
+        const handler = (_event: any, plugins: any): void => {
+            console.log('Plugins loaded via event:', plugins)
+            setPlugins(plugins)
+        }
+
+        window.electron.ipcRenderer.on('plugins-loaded', handler)
         // avisa o main quando o listener já existe
         window.electron.ipcRenderer.send('get-loaded-plugins')
     }, [setPlugins])

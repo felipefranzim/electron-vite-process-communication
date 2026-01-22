@@ -13,13 +13,8 @@ function SecondaryWindowLayout(): React.JSX.Element {
         }
 
         window.electron.ipcRenderer.on('plugins-loaded', handler)
-
         // avisa o main quando o listener já existe
         window.electron.ipcRenderer.send('get-loaded-plugins')
-
-        return () => {
-            window.electron.ipcRenderer.removeListener('plugins-loaded', handler)
-        }
     }, [setPlugins])
 
     return (

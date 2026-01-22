@@ -127,7 +127,7 @@ app.whenReady().then(() => {
         }
     })
 
-    ipcMain.once('get-loaded-plugins', (event) => {
+    ipcMain.on('get-loaded-plugins', (event) => {
         const plugins = pluginManager.getPlugins()
         console.log('Sending plugins to renderer 2:', plugins)
 
