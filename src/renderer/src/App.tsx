@@ -7,41 +7,15 @@ import { usePluginStore } from './stores/usePluginStore'
 function App(): React.JSX.Element {
     const setPlugins = usePluginStore((state: any) => state.setPlugins)
     const plugins = usePluginStore((state) => state.plugins)
+
+    window.electron.ipcRenderer.on('plugins-loaded', (_event, plugins) => {
+        console.log('Plugins loaded via event:', plugins)
+        setPlugins(plugins)
+    })
+
     useEffect(() => {
-        // Estratégia 1: Escutar o evento 'plugins-loaded'
-        const removeListener = window.electron.ipcRenderer.on(
-            'plugins-loaded',
-            (_event, plugins) => {
-                console.log('Plugins loaded via event:', plugins)
-                setPlugins(plugins)
-            }
-        )
-
-        // Estratégia 2: Solicitar os plugins manualmente (fallback)
-        const loadPlugins = async (): Promise<void> => {
-            try {
-                const plugins = await window.electron.ipcRenderer.invoke('get-plugins')
-                console.log('Plugins loaded via invoke:', plugins)
-                if (plugins && plugins.length > 0) {
-                    setPlugins(plugins)
-                }
-            } catch (error) {
-                console.error('Error loading plugins:', error)
-            }
-        }
-
-        // Aguarda um pouco e então solicita os plugins (caso o evento não tenha chegado)
-        const timeoutId = setTimeout(() => {
-            loadPlugins()
-        }, 500)
-
-        // Cleanup
-        return () => {
-            if (removeListener) {
-                removeListener()
-            }
-            clearTimeout(timeoutId)
-        }
+        // avisa o main quando o listener já existe
+        window.electron.ipcRenderer.send('get-loaded-plugins')
     }, [setPlugins])
 
     return (

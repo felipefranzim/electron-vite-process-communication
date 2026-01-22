@@ -93,6 +93,11 @@ export class WindowManager {
             }
         })
 
+        secondaryWindow.on('closed', () => {
+            // Limpa referências ou realiza outras ações necessárias ao fechar
+            this.pluginManager.stopAllPlugins()
+        })
+
         if (this.isDev && process.env['ELECTRON_RENDERER_URL']) {
             secondaryWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}${route}?arg1=${1}`)
             secondaryWindow.webContents.openDevTools()

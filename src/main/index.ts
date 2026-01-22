@@ -127,16 +127,11 @@ app.whenReady().then(() => {
         }
     })
 
-    // Handler para buscar os plugins carregados
-    ipcMain.handle('get-plugins', async () => {
-        try {
-            const plugins = pluginManager.getPlugins()
-            console.log('📦 Plugins requested via IPC handle:', plugins.length, 'plugins')
-            return plugins
-        } catch (error) {
-            console.error('❌ Error getting plugins:', error)
-            return []
-        }
+    ipcMain.once('get-loaded-plugins', (event) => {
+        const plugins = pluginManager.getPlugins()
+        console.log('Sending plugins to renderer 2:', plugins)
+
+        event.sender.send('plugins-loaded', plugins)
     })
 
     createApplication()

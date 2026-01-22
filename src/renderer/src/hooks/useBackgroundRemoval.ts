@@ -5,9 +5,9 @@ import useWebSocket, { ReadyState } from 'react-use-websocket'
 import { usePluginStore } from '@renderer/stores/usePluginStore'
 
 export interface RemoveBackgroundCommand {
-    Type: 'RemoveBackgroundCommand'
+    Type: string
     Image: string
-    Engine: 'modnet'
+    Engine: string
 }
 
 export interface RemoveBackgroundResponse {
@@ -21,7 +21,8 @@ export function useBackgroundRemoval(): {
     readyState: ReadyState
 } {
     const ref = useRef<boolean>(false)
-    const pluginManifest = usePluginStore((state) => state.plugins)
+    const pluginManifest = usePluginStore((state) => state.getPluginManifest('BackgroundRemoval'))
+    const plugins = usePluginStore((state) => state.plugins)
 
     const [pluginStarted, setPluginStarted] = useState<boolean>(false)
     const [wsUrl, setWsUrl] = useState<string | null>(null)
@@ -31,6 +32,9 @@ export function useBackgroundRemoval(): {
         shouldReconnect: () => true,
         onOpen: () => {
             console.log('WebSocket connection opened for Background Removal Plugin')
+        },
+        onError: (event) => {
+            console.error('WebSocket error for Background Removal Plugin:', event)
         }
     })
 
@@ -41,6 +45,10 @@ export function useBackgroundRemoval(): {
             setPluginStarted(true)
         }
     })
+
+    useEffect(() => {
+        console.log('Plugins changed:', plugins)
+    }, [plugins])
 
     useEffect(() => {
         if (!ref.current) {
@@ -56,12 +64,13 @@ export function useBackgroundRemoval(): {
         })
         if (pluginManifest && pluginStarted) {
             console.log('Setting WebSocket URL for Background Removal Plugin')
-            //setWsUrl(`ws://localhost:${pluginManifest?.Port}/${pluginManifest?.Endpoint}`)
+            setWsUrl(`ws://localhost:${pluginManifest?.Port}/${pluginManifest?.Endpoint}`)
         }
     }, [pluginManifest, pluginStarted])
 
     useEffect(() => {
         if (lastMessage && lastMessage.data) {
+            console.log('Received message from Background Removal Plugin:', lastMessage.data)
             const response = JSON.parse(lastMessage.data) as RemoveBackgroundResponse
             if (response.Status === 200) {
                 setImagemComFundoRemovido(response)
@@ -70,7 +79,13 @@ export function useBackgroundRemoval(): {
     }, [lastMessage])
 
     function removeBackground(imageData: string): void {
-        sendMessage(JSON.stringify({ Image: imageData } as RemoveBackgroundCommand))
+        const command = {
+            Image: imageData,
+            Type: 'RemoveBackgroundCommand',
+            Engine: 'modnet'
+        } as RemoveBackgroundCommand
+        sendMessage(JSON.stringify(command))
+        console.log('removeBackground called with imageData', command)
     }
 
     return { removeBackground, imagemComFundoRemovido, readyState }
