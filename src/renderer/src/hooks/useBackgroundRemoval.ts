@@ -4,20 +4,35 @@ import { usePlugin } from './usePlugin'
 import useWebSocket, { ReadyState } from 'react-use-websocket'
 import { usePluginStore } from '@renderer/stores/usePluginStore'
 
+export enum BackgroundRemovalStatus
+{
+    BackgroundRemoved,
+    Error
+}
+
+export enum BackgroundRemovalEngine {
+    U2NET,
+    BRIAG,
+    MODNet,
+    BiRefNet
+}
+
 export interface RemoveBackgroundCommand {
     Type: string
     Image: string
-    Engine: string
+    Engine: BackgroundRemovalEngine
 }
 
 export interface RemoveBackgroundResponse {
-    Status: number
+    Status: BackgroundRemovalStatus
     Image: string
+    ErrorMessage?: string
+    ErrorStackTrace?: string
 }
 
 export function useBackgroundRemoval(): {
     removeBackground: (imageData: string) => void
-    imagemComFundoRemovido: RemoveBackgroundResponse | null
+    pluginResponse: RemoveBackgroundResponse | null
     readyState: ReadyState
 } {
     const ref = useRef<boolean>(false)
@@ -26,8 +41,7 @@ export function useBackgroundRemoval(): {
 
     const [pluginStarted, setPluginStarted] = useState<boolean>(false)
     const [wsUrl, setWsUrl] = useState<string | null>(null)
-    const [imagemComFundoRemovido, setImagemComFundoRemovido] =
-        useState<RemoveBackgroundResponse | null>(null)
+    const [pluginResponse, setPluginResponse] = useState<RemoveBackgroundResponse | null>(null)
     const { sendMessage, lastMessage, readyState } = useWebSocket(wsUrl, {
         shouldReconnect: () => true,
         onOpen: () => {
@@ -72,9 +86,7 @@ export function useBackgroundRemoval(): {
         if (lastMessage && lastMessage.data) {
             console.log('Received message from Background Removal Plugin:', lastMessage.data)
             const response = JSON.parse(lastMessage.data) as RemoveBackgroundResponse
-            if (response.Status === 200) {
-                setImagemComFundoRemovido(response)
-            }
+            setPluginResponse(response)
         }
     }, [lastMessage])
 
@@ -82,11 +94,11 @@ export function useBackgroundRemoval(): {
         const command = {
             Image: imageData,
             Type: 'RemoveBackgroundCommand',
-            Engine: 'modnet'
+            Engine: BackgroundRemovalEngine.MODNet
         } as RemoveBackgroundCommand
         sendMessage(JSON.stringify(command))
         console.log('removeBackground called with imageData', command)
     }
 
-    return { removeBackground, imagemComFundoRemovido, readyState }
+    return { removeBackground, pluginResponse, readyState }
 }
